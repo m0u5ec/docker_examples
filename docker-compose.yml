@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  order-service:
+    build: ./order-service
+    container_name: order-service
+    ports:
+      - "5000:5000"
+    environment:
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy # Ждет, пока Postgres полностью запустится и пройдет healthcheck
+    networks:
+      - quickdelivery-network
+
+  logistics-service:
+    build: ./logistics-service
+    container_name: logistics-service
+    ports:
+      - "5001:5001"
+    environment:
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy # Ждет, пока Postgres полностью запустится и пройдет healthcheck
+    networks:
+        - quickdelivery-network
+
+  db:
+    image: postgres:13
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: orders
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - quickdelivery-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d orders"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data: # Сохраняет данные БД на вашем ПК, чтобы они не удалялись при перезапуске
+
+networks:
+  quickdelivery-network:
+    driver: bridge
