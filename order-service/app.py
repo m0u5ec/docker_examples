@@ -16,25 +16,27 @@ def index():
     links = []
     # Перебираем все зарегистрированные во Flask роуты
     for rule in app.url_map.iter_rules():
-        # Исключаем служебный роут для статики и сам корень
-        if rule.endpoint != 'static' and rule.endpoint != 'index':
-            try:
-                # Если эндпоинт требует ID заказа, подставляем тестовую "1" для ссылки
-                if 'order_id' in rule.arguments:
-                    url = url_for(rule.endpoint, order_id=1)
-                else:
-                    url = url_for(rule.endpoint)
+        # Исключаем служебный роут для статики и саму главную страницу
+        if rule.endpoint != 'static' and rule.rule != '/':
 
-                # Получаем доступные HTTP-методы для этого эндпоинта (GET, POST и т.д.)
-                methods = ', '.join([m for m in rule.methods if m not in ['OPTIONS', 'HEAD']])
+            # Получаем чистый путь (например, /orders/<int:order_id>)
+            raw_path = rule.rule
 
-                # Добавляем строку в список в зависимости от метода
-                if 'GET' in rule.methods:
-                    links.append(f'<li>[{methods}] <a href="{url}">{rule.endpoint} -> {url}</a></li>')
-                else:
-                    links.append(f'<li>[{methods}] <b>{rule.endpoint} -> {url}</b> <i>(для отправки через Postman/cURL)</i></li>')
-            except Exception:
-                continue
+            # Делаем путь кликабельным: заменяем типы данных <int:...> на тестовую "1"
+            clean_path = raw_path
+            if '<' in clean_path:
+                # Универсальная замена для Flask-плейсхолдеров (например, <int:order_id> -> 1)
+                import re
+                clean_path = re.sub(r'<[^>]+>', '1', clean_path)
+
+            # Получаем доступные HTTP-методы (GET, POST и т.д.)
+            methods = ', '.join([m for m in rule.methods if m not in ['OPTIONS', 'HEAD']])
+
+            # Формируем элемент списка: если есть GET, делаем ссылку активной
+            if 'GET' in rule.methods:
+                links.append(f'<li>[{methods}] <a href="{clean_path}">{rule.endpoint} -> {raw_path}</a></li>')
+            else:
+                links.append(f'<li>[{methods}] <b>{rule.endpoint} -> {raw_path}</b> <i>(для отправки через Postman/cURL)</i></li>')
 
     return f"""
     <html>
@@ -53,12 +55,11 @@ def index():
             <h1>📦 Order Service API Menu</h1>
             <p>Список доступных эндпоинтов приложения:</p>
             <ul>
-                {"".join(links)}
+                {"".join(links) if links else "<li>Эндпоинты не найдены или еще не зарегистрированы</li>"}
             </ul>
         </body>
     </html>
     """
-
 # --- НОВЫЙ МЕТОД: Получение всех заказов ---
 @app.route('/orders', methods=['GET'])
 def get_orders():

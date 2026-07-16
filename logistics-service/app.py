@@ -15,25 +15,26 @@ def index():
     links = []
     # Перебираем все зарегистрированные во Flask роуты
     for rule in app.url_map.iter_rules():
-        # Исключаем служебный роут для статики и сам корень
-        if rule.endpoint != 'static' and rule.endpoint != 'index':
-            try:
-                # Если эндпоинт требует ID доставки, подставляем тестовую "1" для ссылки
-                if 'delivery_id' in rule.arguments:
-                    url = url_for(rule.endpoint, delivery_id=1)
-                else:
-                    url = url_for(rule.endpoint)
+        # Исключаем служебный роут для статики и саму главную страницу
+        if rule.endpoint != 'static' and rule.rule != '/':
 
-                # Получаем доступные HTTP-методы (POST, PUT и т.д.)
-                methods = ', '.join([m for m in rule.methods if m not in ['OPTIONS', 'HEAD']])
+            # Получаем чистый путь (например, /deliveries/<int:delivery_id>)
+            raw_path = rule.rule
 
-                # Добавляем строку в список (так как GET-эндпоинтов тут пока нет, все будут помечены как для Postman)
-                if 'GET' in rule.methods:
-                    links.append(f'<li>[{methods}] <a href="{url}">{rule.endpoint} -> {url}</a></li>')
-                else:
-                    links.append(f'<li>[{methods}] <b>{rule.endpoint} -> {url}</b> <i>(для отправки через Postman/cURL)</i></li>')
-            except Exception:
-                continue
+            # Делаем путь кликабельным: заменяем плейсхолдеры <int:...> на тестовую "1"
+            clean_path = raw_path
+            if '<' in clean_path:
+                import re
+                clean_path = re.sub(r'<[^>]+>', '1', clean_path)
+
+            # Получаем доступные HTTP-методы (GET, POST и т.д.)
+            methods = ', '.join([m for m in rule.methods if m not in ['OPTIONS', 'HEAD']])
+
+            # Формируем элемент списка: если есть GET, делаем ссылку кликабельной активной
+            if 'GET' in rule.methods:
+                links.append(f'<li>[{methods}] <a href="{clean_path}">{rule.endpoint} -> {raw_path}</a></li>')
+            else:
+                links.append(f'<li>[{methods}] <b>{rule.endpoint} -> {raw_path}</b> <i>(для отправки через Postman/cURL)</i></li>')
 
     return f"""
     <html>
@@ -41,7 +42,7 @@ def index():
             <title>Logistics Service API</title>
             <style>
                 body {{ font-family: sans-serif; margin: 40px; background: #f4f6f9; color: #333; }}
-                h1 {{ color: #2c3e50; }}
+                h1 {{ color: #e67e22; }}
                 ul {{ background: white; padding: 20px 40px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
                 li {{ margin: 10px 0; font-size: 16px; line-height: 1.5; }}
                 a {{ color: #e67e22; text-decoration: none; font-weight: bold; }}
@@ -52,11 +53,46 @@ def index():
             <h1>🚚 Logistics Service API Menu</h1>
             <p>Список доступных эндпоинтов приложения:</p>
             <ul>
-                {"".join(links)}
+                {"".join(links) if links else "<li>Эндпоинты не найдены или еще не зарегистрированы</li>"}
             </ul>
         </body>
     </html>
     """
+
+# --- НОВЫЙ МЕТОД: Получение всех доставок ---
+@app.route('/deliveries', methods=['GET'])
+def get_deliveries():
+    # Безопасно вытягиваем все записи из таблицы deliveries
+    deliveries = db.session.scalars(db.select(Delivery)).all()
+
+    if not deliveries:
+        return jsonify({'message': 'Нет доставок'}), 200
+
+    # Сериализуем объекты SQLAlchemy в массив словарей для JSON
+    deliveries_list = []
+    for d in deliveries:
+        deliveries_list.append({
+            'id': d.id,
+            'order_id': d.order_id,
+            'status': d.status
+        })
+
+    return jsonify(deliveries_list), 200
+
+# --- НОВЫЙ МЕТОД: Получение доставки по ID ---
+@app.route('/deliveries/<int:delivery_id>', methods=['GET'])
+def get_delivery_by_id(delivery_id):
+    # Находим конкретную запись по первичному ключу
+    delivery = db.session.get(Delivery, delivery_id)
+
+    if not delivery:
+        return jsonify({'message': f'Не найдена доставка {delivery_id}'}), 404
+
+    return jsonify({
+        'id': delivery.id,
+        'order_id': delivery.order_id,
+        'status': delivery.status
+    }), 200
 
 @app.route('/deliveries', methods=['POST'])
 def create_delivery():
@@ -69,7 +105,7 @@ def create_delivery():
 @app.route('/deliveries/<int:delivery_id>', methods=['PUT'])
 def update_delivery(delivery_id):
     data = request.get_json()
-    delivery = Delivery.query.get(delivery_id)
+    delivery = db.session.get(Delivery, delivery_id)
     if not delivery:
         return jsonify({'message': 'Delivery not found'}), 404
     delivery.status = data['status']
