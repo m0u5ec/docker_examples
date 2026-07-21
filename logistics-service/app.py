@@ -5,8 +5,10 @@ from utils.db_utils import init_db
 
 app = Flask(__name__)
 app.json.ensure_ascii = False 
-db_password = os.environ.get('DB_PASSWORD', 'password')
-app.config['SQLALCHEMY_DATABASE_URI'] = f'postgresql://postgres:{db_password}@db:5432/logistics'
+db_user=os.environ.get('DB_USER','user')
+db_password=os.environ.get('DB_PASSWORD','password')
+db_name=os.environ.get('DB_NAME','database')
+app.config['SQLALCHEMY_DATABASE_URI'] = f'postgresql://{db_user}:{db_password}@db:5432/{db_name}'
 db.init_app(app)
 
 # --- ГЛАВНАЯ СТРАНИЦА: Меню со ссылками на эндпоинты ---

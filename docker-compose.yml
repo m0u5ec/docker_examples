@@ -8,6 +8,8 @@ services:
       - "5000:5000"
     environment:
       - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_USER=${POSTGRES_USER}
+      - DB_NAME=${POSTGRES_DB}
     depends_on:
       db:
         condition: service_healthy # Ждет, пока Postgres полностью запустится и пройдет healthcheck
@@ -21,6 +23,8 @@ services:
       - "5001:5001"
     environment:
       - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_USER=${POSTGRES_USER}
+      - DB_NAME=${POSTGRES_DB2}
     depends_on:
       db:
         condition: service_healthy # Ждет, пока Postgres полностью запустится и пройдет healthcheck
@@ -31,9 +35,10 @@ services:
     image: postgres:13
     container_name: postgres
     environment:
-      POSTGRES_USER: postgres
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: orders
+      POSTGRES_DB2: logistics
     ports:
       - "5432:5432"
     volumes:
