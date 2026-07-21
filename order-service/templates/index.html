@@ -126,11 +126,16 @@
         <span class="method-put">[PUT]</span> <b>update_order -> /orders/&lt;int:order_id&gt;</b>
         <div class="input-block">
             <input type="number" id="update_order_id" placeholder="ID заказа" min="1" required>
-            <input type="text" id="update_status" placeholder="Новый статус (status)" required>
+
+            <!-- Заменили текстовый инпут на выпадающий список -->
+            <select id="update_status" style="padding: 8px 12px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px; width: 220px; background: white;">
+                <option value="" disabled selected>Выберите статус заказа</option>
+                <option value="Canceled">Canceled</option>
+                <option value="Received">Received</option>
+            </select>
+
             <button class="btn-put" onclick="updateOrder()">Выполнить</button>
         </div>
         <div id="put_result_message" class="result-box"></div>
     </li>
 </ul>
-</body>
-</html>

@@ -126,11 +126,20 @@
         <span class="method-put">[PUT]</span> <b>update_delivery -> /deliveries/&lt;int:delivery_id&gt;</b>
         <div class="input-block">
             <input type="number" id="update_delivery_id" placeholder="ID доставки" min="1" required>
-            <input type="text" id="update_status" placeholder="Новый статус доставки (status)" required>
+
+            <!-- Заменили текстовый инпут на выпадающий список -->
+            <select id="update_status" style="padding: 8px 12px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px; width: 220px; background: white;">
+                <option value="" disabled selected>Выберите статус доставки</option>
+                <option value="Created">Created</option>
+                <option value="In Transit">In Transit</option>
+                <option value="Done">Done</option>
+            </select>
+
             <button class="btn-put" onclick="updateDelivery()">Выполнить</button>
         </div>
         <div id="put_result_message" class="result-box"></div>
     </li>
+
 </ul>
 </body>
 </html>
