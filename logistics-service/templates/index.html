@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Logistics Service API</title>
+    <style>
+        body { font-family: sans-serif; margin: 40px; background: #f4f6f9; color: #333; }
+        h1 { color: #e67e22; }
+        ul { background: white; padding: 20px 40px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); list-style: none; }
+        li { margin: 15px 0; font-size: 16px; line-height: 1.5; padding-bottom: 15px; border-bottom: 1px solid #eee; }
+        .form-item { background: #fdfefe; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
+        .border-get { border: 1px solid #27ae60; background: #fafdfb; }
+        .border-post { border: 1px solid #e67e22; background: #fefaf6; }
+        .border-put { border: 1px solid #2980b9; background: #f6faff; }
+        .method-get { color: #27ae60; font-weight: bold; margin-right: 5px; }
+        .method-post { color: #e67e22; font-weight: bold; margin-right: 5px; }
+        .method-put { color: #2980b9; font-weight: bold; margin-right: 5px; }
+        a { color: #e67e22; text-decoration: none; font-weight: bold; }
+        a:hover { text-decoration: underline; }
+        .input-block { margin-top: 10px; }
+        input { padding: 8px 12px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px; width: 220px; }
+        button { padding: 8px 15px; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-post { background: #e67e22; }
+        .btn-get { background: #27ae60; }
+        .btn-put { background: #2980b9; }
+        .result-box { margin-top: 10px; font-weight: bold; font-size: 14px; }
+    </style>
+    <script>
+        // 1. Функция перехода к доставке по ID (GET)
+        function goToDelivery() {
+            const deliveryId = document.getElementById('search_delivery_id').value;
+            if (!deliveryId) { alert('Введите ID доставки!'); return; }
+            window.open('/deliveries/' + deliveryId, '_blank');
+        }
+
+        // 2. Функция отправки POST запроса (Создание доставки)
+        async function sendDelivery() {
+            const orderId = document.getElementById('order_id').value;
+            const resultBox = document.getElementById('result_message');
+            if (!orderId) {
+                resultBox.style.color = 'red';
+                resultBox.innerText = '⚠️ Пожалуйста, введите ID заказа!';
+                return;
+            }
+            try {
+                const response = await fetch('/deliveries', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order_id: parseInt(orderId) })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    resultBox.style.color = '#27ae60';
+                    resultBox.innerText = '✅ Успех: ' + data.message;
+                    document.getElementById('order_id').value = '';
+                } else {
+                    resultBox.style.color = 'red';
+                    resultBox.innerText = '❌ Ошибка: ' + (data.message || 'Что-то пошло не так');
+                }
+            } catch (err) {
+                resultBox.style.color = 'red';
+                resultBox.innerText = '❌ Ошибка сети';
+            }
+        }
+
+        // 3. Функция отправки PUT запроса (Обновление статуса доставки)
+        async function updateDelivery() {
+            const deliveryId = document.getElementById('update_delivery_id').value;
+            const status = document.getElementById('update_status').value;
+            const resultBox = document.getElementById('put_result_message');
+            if (!deliveryId || !status) {
+                resultBox.style.color = 'red';
+                resultBox.innerText = '⚠️ Заполните ID доставки и новый статус!';
+                return;
+            }
+            try {
+                const response = await fetch('/deliveries/' + deliveryId, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: status })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    resultBox.style.color = '#27ae60';
+                    resultBox.innerText = '✅ Успех: ' + data.message;
+                    document.getElementById('update_delivery_id').value = '';
+                    document.getElementById('update_status').value = '';
+                } else {
+                    resultBox.style.color = 'red';
+                    resultBox.innerText = '❌ Ошибка: ' + (data.message || 'Доставка не найдена');
+                }
+            } catch (err) {
+                resultBox.style.color = 'red';
+                resultBox.innerText = '❌ Ошибка сети';
+            }
+        }
+    </script>
+</head>
+<body>
+<h1>🚚 Logistics Service API Menu</h1>
+<p>Список доступных эндпоинтов приложения:</p>
+<ul>
+    <!-- 1. GET /deliveries -->
+    <li><span class="method-get">[GET]</span> <a href="/deliveries">get_deliveries -> /deliveries</a></li>
+
+    <!-- 2. GET /deliveries/<id> -->
+    <li class="form-item border-get">
+        <span class="method-get">[GET]</span> <b>get_delivery_by_id -> /deliveries/&lt;int:delivery_id&gt;</b>
+        <div class="input-block">
+            <input type="number" id="search_delivery_id" placeholder="ID доставки" min="1" required>
+            <button class="btn-get" onclick="goToDelivery()">Перейти</button>
+        </div>
+    </li>
+
+    <!-- 3. POST /deliveries -->
+    <li class="form-item border-post">
+        <span class="method-post">[POST]</span> <b>create_delivery -> /deliveries</b>
+        <div class="input-block">
+            <input type="number" id="order_id" placeholder="Идентификатор заказа (order_id)" required>
+            <button class="btn-post" onclick="sendDelivery()">Выполнить</button>
+        </div>
+        <div id="result_message" class="result-box"></div>
+    </li>
+
+    <!-- 4. PUT /deliveries/<id> -->
+    <li class="form-item border-put">
+        <span class="method-put">[PUT]</span> <b>update_delivery -> /deliveries/&lt;int:delivery_id&gt;</b>
+        <div class="input-block">
+            <input type="number" id="update_delivery_id" placeholder="ID доставки" min="1" required>
+            <input type="text" id="update_status" placeholder="Новый статус доставки (status)" required>
+            <button class="btn-put" onclick="updateDelivery()">Выполнить</button>
+        </div>
+        <div id="put_result_message" class="result-box"></div>
+    </li>
+</ul>
+</body>
+</html>

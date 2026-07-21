@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Order Service API</title>
+    <style>
+        body { font-family: sans-serif; margin: 40px; background: #f4f6f9; color: #333; }
+        h1 { color: #2c3e50; }
+        ul { background: white; padding: 20px 40px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); list-style: none; }
+        li { margin: 15px 0; font-size: 16px; line-height: 1.5; padding-bottom: 15px; border-bottom: 1px solid #eee; }
+        .form-item { background: #fdfefe; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
+        .border-get { border: 1px solid #27ae60; background: #fafdfb; }
+        .border-post { border: 1px solid #e67e22; background: #fefaf6; }
+        .border-put { border: 1px solid #2980b9; background: #f6faff; }
+        .method-get { color: #27ae60; font-weight: bold; margin-right: 5px; }
+        .method-post { color: #e67e22; font-weight: bold; margin-right: 5px; }
+        .method-put { color: #2980b9; font-weight: bold; margin-right: 5px; }
+        a { color: #3498db; text-decoration: none; font-weight: bold; }
+        a:hover { text-decoration: underline; }
+        .input-block { margin-top: 10px; }
+        input { padding: 8px 12px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px; width: 220px; }
+        button { padding: 8px 15px; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-post { background: #e67e22; }
+        .btn-get { background: #27ae60; }
+        .btn-put { background: #2980b9; }
+        .result-box { margin-top: 10px; font-weight: bold; font-size: 14px; }
+    </style>
+    <script>
+        async function sendOrder() {
+            const customerName = document.getElementById('cust_name').value;
+            const itemName = document.getElementById('item_name').value;
+            const resultBox = document.getElementById('result_message');
+            if (!customerName || !itemName) {
+                resultBox.style.color = 'red';
+                resultBox.innerText = '⚠️ Пожалуйста, заполните оба поля!';
+                return;
+            }
+            try {
+                const response = await fetch('/orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customer_name: customerName, item: itemName })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    resultBox.style.color = '#27ae60';
+                    resultBox.innerText = '✅ Успех: ' + data.message;
+                    document.getElementById('cust_name').value = '';
+                    document.getElementById('item_name').value = '';
+                } else {
+                    resultBox.style.color = 'red';
+                    resultBox.innerText = '❌ Ошибка: ' + (data.message || 'Что-то пошло не так');
+                }
+            } catch (err) {
+                resultBox.style.color = 'red';
+                resultBox.innerText = '❌ Ошибка сети';
+            }
+        }
+
+        function goToOrder() {
+            const orderId = document.getElementById('search_order_id').value;
+            if (!orderId) { alert('Введите ID заказа!'); return; }
+            window.open('/orders/' + orderId, '_blank');
+        }
+
+        async function updateOrder() {
+            const orderId = document.getElementById('update_order_id').value;
+            const status = document.getElementById('update_status').value;
+            const resultBox = document.getElementById('put_result_message');
+            if (!orderId || !status) {
+                resultBox.style.color = 'red';
+                resultBox.innerText = '⚠️ Заполните ID заказа и новый статус!';
+                return;
+            }
+            try {
+                const response = await fetch('/orders/' + orderId, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: status })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    resultBox.style.color = '#27ae60';
+                    resultBox.innerText = '✅ Успех: ' + data.message;
+                    document.getElementById('update_order_id').value = '';
+                    document.getElementById('update_status').value = '';
+                } else {
+                    resultBox.style.color = 'red';
+                    resultBox.innerText = '❌ Ошибка: ' + (data.message || 'Заказ не найден');
+                }
+            } catch (err) {
+                resultBox.style.color = 'red';
+                resultBox.innerText = '❌ Ошибка сети';
+            }
+        }
+    </script>
+</head>
+<body>
+<h1>📦 Order Service API Menu</h1>
+<p>Список доступных эндпоинтов приложения:</p>
+<ul>
+    <!-- 1. GET /orders -->
+    <li><span class="method-get">[GET]</span> <a href="/orders">get_orders -> /orders</a></li>
+
+    <!-- 2. GET /orders/<id> -->
+    <li class="form-item border-get">
+        <span class="method-get">[GET]</span> <b>get_order_by_id -> /orders/&lt;int:order_id&gt;</b>
+        <div class="input-block">
+            <input type="number" id="search_order_id" placeholder="ID заказа" min="1" required>
+            <button class="btn-get" onclick="goToOrder()">Перейти</button>
+        </div>
+    </li>
+
+    <!-- 3. POST /orders -->
+    <li class="form-item border-post">
+        <span class="method-post">[POST]</span> <b>create_order -> /orders</b>
+        <div class="input-block">
+            <input type="text" id="cust_name" placeholder="Имя клиента (customer_name)" required>
+            <input type="text" id="item_name" placeholder="Товар (item)" required>
+            <button class="btn-post" onclick="sendOrder()">Выполнить</button>
+        </div>
+        <div id="result_message" class="result-box"></div>
+    </li>
+
+    <!-- 4. PUT /orders/<id> -->
+    <li class="form-item border-put">
+        <span class="method-put">[PUT]</span> <b>update_order -> /orders/&lt;int:order_id&gt;</b>
+        <div class="input-block">
+            <input type="number" id="update_order_id" placeholder="ID заказа" min="1" required>
+            <input type="text" id="update_status" placeholder="Новый статус (status)" required>
+            <button class="btn-put" onclick="updateOrder()">Выполнить</button>
+        </div>
+        <div id="put_result_message" class="result-box"></div>
+    </li>
+</ul>
+</body>
+</html>
